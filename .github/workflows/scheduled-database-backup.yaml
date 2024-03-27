@@ -1,0 +1,32 @@
+name: Trigger Vercel API Endpoint
+
+on:
+  schedule:
+    - cron: '0 */4 * * *' # runs every 4 hours
+jobs:
+  trigger-api:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Hit API Endpoint
+        id: hit_api
+        run: |
+          curl -s -o response.txt -w "%{http_code}" https://vercel-test-ten-tan.vercel.app/api/backup > status.txt
+
+      - name: Upload response
+        uses: actions/upload-artifact@v2
+        with:
+          name: API Response
+          path: response.txt
+
+      - name: Upload status
+        uses: actions/upload-artifact@v2
+        with:
+          name: API Status
+          path: status.txt
+
+      - name: Log response
+        run: |
+          echo "Response from API:"
+          cat response.txt
+          echo "Status Code:"
+          cat status.txt
