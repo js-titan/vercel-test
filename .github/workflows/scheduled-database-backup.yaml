@@ -2,40 +2,31 @@ name: Backup PostgreSQL Database
 
 on:
   schedule:
-    - cron: '0 */1 * * *' # 
-  workflow_dispatch: # Allows manual triggering
+    - cron: '0 0 * * *' # Run every day at midnight
+  workflow_dispatch:
 
 jobs:
   backup:
     runs-on: ubuntu-latest
     steps:
-    - name: Install specific version of PostgreSQL client
-      run: |
-          sudo apt-get -y install postgresql-client-16
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-    # steps:
-    #   - name: Run pg_dump using Docker
-    #     env:
-    #       PGHOST: ${{ secrets.PGHOST }}
-    #       PGUSER: ${{ secrets.PGUSER }}
-    #       PGPASSWORD: ${{ secrets.PGPASSWORD }}
-    #       PGDATABASE: ${{ secrets.PGDATABASE }}
-    #       PGPORT: ${{ secrets.PGPORT }}
-    #     run: |
-    #       docker run --rm postgres:16.2 pg_dump -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDATABASE -W > database_backup.sql
+      - name: Run pg_dump using Docker
+        env:
+          PGHOST: ${{ secrets.PGHOST }}
+          PGUSER: ${{ secrets.PGUSER }}
+          PGPASSWORD: ${{ secrets.PGPASSWORD }}
+          PGDATABASE: ${{ secrets.PGDATABASE }}
+          PGPORT: ${{ secrets.PGPORT }}
+        run: |
+          docker run --rm \
+            -e PGPASSWORD=$PGPASSWORD \
+            postgres:16.2 \
+            pg_dump -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDATABASE --no-password --format=c > database_backup.sql
 
-    - name: Run pg_dump
-      env:
-        PGHOST: ${{ secrets.PGHOST }}
-        PGUSER: ${{ secrets.PGUSER }}
-        PGPASSWORD: ${{ secrets.PGPASSWORD }}
-        PGDATABASE: ${{ secrets.PGDATABASE }}
-        PGPORT: ${{ secrets.PGPORT }}
-      run: |
-        pg_dump -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDATABASE > database_backup.sql
-
-    - name: Upload Backup to Artifacts
-      uses: actions/upload-artifact@v2
-      with:
-        name: db-backup
-        path: database_backup.sql
+      - name: Upload Backup to Artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: db-backup
+          path: database_backup.sql
