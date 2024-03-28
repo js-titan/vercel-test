@@ -23,10 +23,10 @@ jobs:
           docker run --rm \
             -e PGPASSWORD=$PGPASSWORD \
             postgres:16.2 \
-            pg_dump -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDATABASE --no-password --format=c > database_backup.sql
+            pg_dump -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDATABASE --no-password --format=c > database_backup.dump
 
       - name: Upload Backup to Artifacts
         uses: actions/upload-artifact@v2
         with:
           name: db-backup
-          path: database_backup.sql
+          path: database_backup.dump
