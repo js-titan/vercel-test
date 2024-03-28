@@ -1,32 +1,29 @@
-name: Trigger Vercel API Endpoint
+name: Backup PostgreSQL Database
 
 on:
   schedule:
-    - cron: '0 */4 * * *' # runs every 4 hours
+    - cron: '0 */1 * * *' # 
+  workflow_dispatch: # Allows manual triggering
+
 jobs:
-  trigger-api:
+  backup:
     runs-on: ubuntu-latest
     steps:
-      - name: Hit API Endpoint
-        id: hit_api
-        run: |
-          curl -s -o response.txt -w "%{http_code}" https://vercel-test-ten-tan.vercel.app/api/backup > status.txt
+    - name: Install PostgreSQL client
+      run: sudo apt-get install -y postgresql-client
 
-      - name: Upload response
-        uses: actions/upload-artifact@v2
-        with:
-          name: API Response
-          path: response.txt
+    - name: Run pg_dump
+      env:
+        PGHOST: ${{ secrets.PGHOST }}
+        PGUSER: ${{ secrets.PGUSER }}
+        PGPASSWORD: ${{ secrets.PGPASSWORD }}
+        PGDATABASE: ${{ secrets.PGDATABASE }}
+        PGPORT: ${{ secrets.PGPORT }}
+      run: |
+        pg_dump -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDATABASE > database_backup.sql
 
-      - name: Upload status
-        uses: actions/upload-artifact@v2
-        with:
-          name: API Status
-          path: status.txt
-
-      - name: Log response
-        run: |
-          echo "Response from API:"
-          cat response.txt
-          echo "Status Code:"
-          cat status.txt
+    - name: Upload Backup to Artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: db-backup
+        path: database_backup.sql

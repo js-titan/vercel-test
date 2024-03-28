@@ -21,7 +21,6 @@ async function createDatabaseBackup(dumpFile: string): Promise<void> {
   // Generate backup of PostgreSQL database
   const backupFileName = 'database_backup.sql';
   await db.any(`pg_dump -U ${POSTGRES_USER} -d ${POSTGRES_DATABASE} > ${backupFileName}`);
-
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
