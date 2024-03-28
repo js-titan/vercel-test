@@ -1,4 +1,7 @@
+// pages/api/backup.ts
+
 import { NextApiRequest, NextApiResponse } from 'next';
+import { Pool } from 'pg';
 import { exec as execCb } from 'child_process';
 import fs from 'fs';
 import archiver from 'archiver';
@@ -9,9 +12,9 @@ dotenv.config();
 
 const exec = promisify(execCb);
 
-async function createDatabaseBackup(dumpFile: string): Promise<void> {
+async function createDatabaseBackup(pool: Pool, dumpFile: string): Promise<void> {
   const { POSTGRES_USER, POSTGRES_DATABASE, POSTGRES_HOST, POSTGRES_PASSWORD } = process.env;
-
+  
   if (!POSTGRES_USER || !POSTGRES_DATABASE || !POSTGRES_HOST || !POSTGRES_PASSWORD) {
     throw new Error('Database environment variables are not fully set');
   }
@@ -22,12 +25,20 @@ async function createDatabaseBackup(dumpFile: string): Promise<void> {
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
+    const pool = new Pool({
+      user: process.env.POSTGRES_USER,
+      host: process.env.POSTGRES_HOST,
+      database: process.env.POSTGRES_DATABASE,
+      password: process.env.POSTGRES_PASSWORD,
+      port: parseInt(process.env.POSTGRES_PORT || '5432'),
+    });
+
     const backupFileName = 'database_backup.sql';
     const zipFileName = 'database_backup.zip';
 
-    await createDatabaseBackup(backupFileName);
+    await createDatabaseBackup(pool, backupFileName);
 
-    // Check if the backup file has been created and has content
+    // Ensure the backup file was created and has content
     if (!fs.existsSync(backupFileName) || fs.statSync(backupFileName).size === 0) {
       throw new Error('Backup file is empty or not created');
     }
@@ -44,15 +55,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       archive.finalize();
     });
 
-    // Stream the zip file to the response
+    // Stream the zip file as the response
     res.setHeader('Content-Type', 'application/zip');
     res.setHeader('Content-Disposition', `attachment; filename=${zipFileName}`);
 
     const fileStream = fs.createReadStream(zipFileName);
     fileStream.pipe(res);
-    fileStream.on('error', error => {
-      console.error('Error streaming the zip file:', error);
-      res.status(500).end();
+    fileStream.on('end', () => {
+      fs.unlinkSync(backupFileName);
+      fs.unlinkSync(zipFileName);
     });
   } catch (error) {
     console.error('Error:', error);
