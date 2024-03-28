@@ -1,32 +1,31 @@
 // pages/api/backup.ts
 
 import { NextApiRequest, NextApiResponse } from 'next';
+import pgp from 'pg-promise';
 import fs from 'fs';
 import archiver from 'archiver';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-import { exec as execCb } from 'child_process';
-import { promisify } from 'util';
-
-const exec = promisify(execCb);
-
 async function createDatabaseBackup(dumpFile: string): Promise<void> {
-  const { POSTGRES_USER, POSTGRES_DATABASE, POSTGRES_HOST, POSTGRES_PASSWORD, POSTGRES_PORT } = process.env;
+  const { POSTGRES_USER, POSTGRES_DATABASE, POSTGRES_HOST, POSTGRES_PASSWORD, POSTGRES_URL } = process.env;
   
-  if (!POSTGRES_USER || !POSTGRES_DATABASE || !POSTGRES_HOST || !POSTGRES_PASSWORD) {
+  if (!POSTGRES_USER || !POSTGRES_DATABASE || !POSTGRES_HOST || !POSTGRES_PASSWORD || !POSTGRES_URL) {
     throw new Error('Database environment variables are not fully set');
   }
+  // Connect to PostgreSQL database
+  const db = pgp()(POSTGRES_URL);
+  await db.connect();
 
-  const dumpCommand = `PGPASSWORD=${POSTGRES_PASSWORD} pg_dump -h ${POSTGRES_HOST} -p ${POSTGRES_PORT || '5432'} -U ${POSTGRES_USER} -d ${POSTGRES_DATABASE} -f ${dumpFile}`;
-  await exec(dumpCommand);
+  // Generate backup of PostgreSQL database
+  const backupFileName = 'database_backup.sql';
+  await db.any(`pg_dump -U ${POSTGRES_USER} -d ${POSTGRES_DATABASE} > ${backupFileName}`);
+
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
-   
-
     const backupFileName = 'database_backup.sql';
     const zipFileName = 'database_backup.zip';
 
