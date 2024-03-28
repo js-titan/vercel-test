@@ -9,8 +9,20 @@ jobs:
   backup:
     runs-on: ubuntu-latest
     steps:
-    - name: Install PostgreSQL client
-      run: sudo apt-get install -y postgresql-client
+    - name: Install specific version of PostgreSQL client
+      run: |
+          sudo apt-get -y install postgresql-client-16
+
+    # steps:
+    #   - name: Run pg_dump using Docker
+    #     env:
+    #       PGHOST: ${{ secrets.PGHOST }}
+    #       PGUSER: ${{ secrets.PGUSER }}
+    #       PGPASSWORD: ${{ secrets.PGPASSWORD }}
+    #       PGDATABASE: ${{ secrets.PGDATABASE }}
+    #       PGPORT: ${{ secrets.PGPORT }}
+    #     run: |
+    #       docker run --rm postgres:16.2 pg_dump -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDATABASE -W > database_backup.sql
 
     - name: Run pg_dump
       env:
